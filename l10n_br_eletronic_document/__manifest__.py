@@ -36,6 +36,7 @@
         'wizard/carta_correcao_eletronica.xml',
         'wizard/export_nfe.xml',
         'wizard/inutilize_nfe_numeration.xml',
+        'reports/danfse_ginfes.xml',
         'reports/danfse_sao_paulo.xml',
         'reports/danfse_florianopolis.xml',
         'reports/danfse_bh.xml',

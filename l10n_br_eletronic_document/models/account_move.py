@@ -151,7 +151,7 @@ class AccountMove(models.Model):
                             if not line.product_id.service_code:
                                 errors.append('Produto %s não possui Código do Município.' % line.product_id.name)
                 else:
-                    if not move.company_id.l10n_br_nfse_token_acess:
+                    if not move.company_id.l10n_br_nfse_token_acess and cod_municipio != '3518800':
                         errors.append('Token da Focus não está preenchida!\nPor favor, preencha-a no cadastro da empresa.')
 
             partner = move.partner_id.commercial_partner_id

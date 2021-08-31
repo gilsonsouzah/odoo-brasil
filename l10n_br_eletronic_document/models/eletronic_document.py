@@ -859,6 +859,16 @@ class EletronicDocument(models.Model):
         elif cod_municipio == '3550308':
             from .nfse_paulistana import send_api
             response = send_api(certificate, password, doc_values)
+        elif cod_municipio == '3518800':
+            from .nfse_ginfes import send_api
+            for doc in doc_values:
+                doc['data_emissao'] = self.data_emissao.strftime('%Y-%m-%dT%H:%M:%S')
+                doc['valor_pis'] = self.pis_valor_retencao
+                doc['valor_cofins'] = self.cofins_valor_retencao
+                doc['valor_inss'] = self.inss_valor_retencao
+                doc['valor_ir'] = self.irrf_valor_retencao
+                doc['valor_csll'] = self.csll_valor_retencao
+            response = send_api(certificate, password, doc_values)
         elif cod_municipio == '3106200':
             from .nfse_bh import send_api
             for doc in doc_values:
@@ -963,6 +973,9 @@ class EletronicDocument(models.Model):
             response = cancel_api(certificate, password, doc_values)
         elif doc_values['codigo_municipio'] == '3550308':
             from .nfse_paulistana import cancel_api
+            response = cancel_api(certificate, password, doc_values)
+        elif doc_values['codigo_municipio'] == '3518800':
+            from .nfse_ginfes import cancel_api
             response = cancel_api(certificate, password, doc_values)
         elif doc_values['codigo_municipio'] == '3106200':
             from .nfse_bh import cancel_api

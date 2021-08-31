@@ -1,0 +1,568 @@
+<?xml version="1.0" ?>
+<odoo>
+
+    <report
+    id="report_br_nfse_danfe_ginfes"
+    string="Nota de Serviço - GINFES"
+    model="invoice.eletronic"
+    report_type="qweb-pdf"
+    file="l10n_br_eletronic_document.main_template_br_nfse_danfe_ginfes"
+    name="l10n_br_eletronic_document.main_template_br_nfse_danfe_ginfes"
+  />
+
+      <record id="paperformat_br_nfse_danfse" model="report.paperformat">
+          <field name="name">Danfe</field>
+          <field name="default" eval="True" />
+          <field name="orientation">Portrait</field>
+          <field name="margin_top">3</field>
+          <field name="margin_bottom">3</field>
+          <field name="margin_left">3</field>
+          <field name="margin_right">3</field>
+          <field name="header_line" eval="False" />
+          <field name="header_spacing">3</field>
+      </record>
+
+    <record id="report_br_nfse_danfe_ginfes" model="ir.actions.report">
+        <field name="paperformat_id" ref="paperformat_br_nfse_danfse" />
+        <field name="name">Nota de Serviço - GINFES</field>
+        <field
+      name="print_report_name"
+    >'%s - NF - %s.pdf' % (object.numero, object.partner_id.name)</field>
+    </record>
+
+    <template id="danfse_report_template_ginfes">
+        <style type="text/css">
+            .col-1, .col-2,
+            .col-3,.col-4,.col-5, .col-6, .col-7,
+            .col-8,
+            .col-9, .col-10, .col-11, .col-12 {
+                padding:0px;
+            }
+            td, th { padding: 0 4px; }
+            .bt { border-top: 1px solid black; }
+            .bb { border-bottom: 1px solid black; }
+            .bl { border-left: 1px solid black; }
+            .br { border-right: 1px solid black; }
+            div.completa { border: 1px solid black; }
+            .rotulo { padding: 8px 0px; font-size: 10px; background-color: #d6d6d6; text-align:center; }
+            .linha {  min-height:30px; padding: 5px 2px; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .direita {text-align: right; padding-right:5px;}
+            .centro {text-align:center;}
+            .watermark {
+                position:fixed;
+                top:500px;
+                right:-190px;
+                opacity:0.50;
+                z-index:1000;
+                -webkit-transform:rotate(300deg);
+                font-size:150px;
+                white-space:nowrap;
+            }
+        </style>
+        <div class="page" style="font-size:12px;min-width:1000px;">
+            <div t-if="doc.state == 'cancel'" class="watermark">
+                <p>NOTA CANCELADA</p>
+            </div>
+            <div class="row completa">
+                <div class="col-2">
+                    <img
+            src="/l10n_br_eletronic_document/static/src/img/nota-ginfes.gif"
+            alt="Logo GINFES"
+            style="max-height:80px; margin-top:4px; margin-left:10px;"
+          />
+                </div>
+                <div
+          class="col-7 br"
+          style="padding:0px;text-align:center;font-size:20px;"
+        >
+                    PREFEITURA MUNICIPAL DE <span style="text-transform: uppercase;" t-field="doc.company_id.partner_id.city_id" />
+                    <br />
+                    SECRETARIA DE FINANÇAS
+                    <br />
+                    <strong style="font-size:21px;">NOTA FISCAL ELETRÔNICA DE SERVIÇO - NFS-e</strong>
+                </div>
+                <div class="col-3" style="padding:0px;">
+                    <div style="padding: 3px; text-align:center;">
+                        <t t-if="doc.state == 'done'">
+                            <span>Número da NFS-e</span>
+                            <br />
+                            <strong t-field="doc.numero"/>
+                        </t>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-2 rotulo br">
+                    Data e Hora da Emissão
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.data_emissao" t-options='{"format": "dd/MM/yyyy HH:mm:ss"}'/>
+                </div>
+                <div class="col-2 rotulo br">
+                    Competência
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.data_emissao" t-options='{"format": "MM/yyyy"}'/>
+                </div>
+                <div class="col-2 rotulo br">
+                    Código de Verificação
+                </div>
+                <div class="col-2 linha">
+                    <t t-if="doc.state == 'done'">
+                        <span t-field="doc.verify_code" />
+                    </t>
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-2 rotulo br">
+                    Número do RPS
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.numero_rps" />
+                </div>
+                <div class="col-2 rotulo br">
+                    No. da NFS-e substituída
+                </div>
+                <div class="col-2 linha br">
+                </div>
+                <div class="col-2 rotulo br">
+                    Local da Prestação
+                </div>
+                <div class="col-2 linha">
+                    <span t-field="doc.company_id.partner_id.city_id" /> - <span
+            t-field="doc.company_id.partner_id.state_id.code"
+          />
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12 rotulo">
+                    <h4 style="margin:0px;">Dados do Prestador de Serviços</h4>
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-2">
+                    <img
+            style="max-height:200px;margin-top:15px;max-width:140px;"
+            t-att-src="'data:image/png;base64,%s' % to_text(doc.company_id.logo)"
+          /><br />
+                </div>
+                <div class="col-10">
+                    <div class="row bb bl" style="margin:0px;">
+                        <div class="col-2 rotulo br">
+                            Razão Social/Nome
+                        </div>
+                        <div class="col-10 linha">
+                            <span t-field="doc.company_id.partner_id.l10n_br_legal_name" />
+                        </div>
+                    </div>
+                    <div class="row bb bl" style="margin:0px;">
+                        <div class="col-2 rotulo br">
+                            Nome Fantasia
+                        </div>
+                        <div class="col-10 linha">
+                            <span t-field="doc.company_id.partner_id.name" />
+                        </div>
+                    </div>
+                    <div class="row bb bl" style="margin:0px;">
+                        <div class="col-2 rotulo br">
+                            CNPJ/CPF
+                        </div>
+                        <div class="col-2 linha br">
+                            <span t-field="doc.company_id.partner_id.l10n_br_cnpj_cpf" />
+                        </div>
+                        <div class="col-2 rotulo br">
+                            Insc. Municipal
+                        </div>
+                        <div class="col-1 linha br">
+                            <span t-field="doc.company_id.partner_id.l10n_br_inscr_mun" />
+                        </div>
+                        <div class="col-1 rotulo br">
+                            Município
+                        </div>
+                        <div class="col-4 linha">
+                            <span t-field="doc.company_id.partner_id.city_id" /> - <span
+                t-field="doc.company_id.partner_id.state_id.code"
+              />
+                        </div>
+                    </div>
+                    <div class="row bb bl" style="margin:0px;">
+                        <div class="col-2 rotulo br">
+                            Endereço e Cep
+                        </div>
+                        <div class="col-10 linha">
+                            <span t-field="doc.company_id.partner_id.street" />
+                            <span t-field="doc.company_id.partner_id.l10n_br_number" />
+                            <span t-field="doc.company_id.partner_id.l10n_br_district" />
+                            CEP: <span t-field="doc.company_id.partner_id.zip" />
+                        </div>
+                    </div>
+                    <div class="row bb bl" style="margin:0px;">
+                        <div class="col-2 rotulo br">
+                            Complemento:
+                        </div>
+                        <div class="col-2 linha br">
+                            <span
+                style="font-size:11px;"
+                t-field="doc.commercial_partner_id.street2"
+              />
+                        </div>
+                        <div class="col-1 rotulo br">
+                            Telefone:
+                        </div>
+                        <div class="col-2 linha br">
+                            <span t-field="doc.company_id.partner_id.phone" />
+                        </div>
+                        <div class="col-1 rotulo br">
+                            E-mail:
+                        </div>
+                        <div class="col-4 linha">
+                            <span t-field="doc.company_id.partner_id.email" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12 rotulo">
+                    <h4 style="margin:0px;">Dados do Tomador de Serviços</h4>
+                </div>
+            </div>
+            <div class="row bb bl br">
+                <div class="col-2 rotulo br">
+                    Razão Social/Nome
+                </div>
+                <div class="col-10 linha">
+                    <span
+            t-raw="doc.commercial_partner_id.l10n_br_legal_name or doc.commercial_partner_id.name"
+          />
+                </div>
+            </div>
+            <div class="row bb bl br">
+                <div class="col-2 rotulo br">
+                    CNPJ/CPF
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.commercial_partner_id.l10n_br_cnpj_cpf" />
+                </div>
+                <div class="col-2 rotulo br">
+                    Insc. Municipal
+                </div>
+                <div class="col-1 linha br">
+                    <span t-field="doc.commercial_partner_id.l10n_br_inscr_mun" />
+                </div>
+                <div class="col-1 rotulo br">
+                    Município
+                </div>
+                <div class="col-4 linha">
+                    <span t-field="doc.commercial_partner_id.city_id" /> - <span
+            t-field="doc.commercial_partner_id.state_id"
+          />
+                </div>
+            </div>
+            <div class="row bb bl br">
+                <div class="col-2 rotulo br">
+                    Endereço e Cep
+                </div>
+                <div class="col-10 linha">
+                    <span t-field="doc.commercial_partner_id.street" />
+                    <span t-field="doc.commercial_partner_id.l10n_br_number" />
+                    <span t-field="doc.commercial_partner_id.l10n_br_district" />
+                    CEP: <span t-field="doc.commercial_partner_id.zip" />
+                </div>
+            </div>
+            <div class="row bb bl br">
+                <div class="col-2 rotulo br">
+                    Complemento:
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.commercial_partner_id.street2" />
+                </div>
+                <div class="col-1 rotulo br">
+                    Telefone:
+                </div>
+                <div class="col-2 linha br">
+                    <span t-field="doc.partner_id.phone" />
+                </div>
+                <div class="col-1 rotulo br">
+                    E-mail:
+                </div>
+                <div class="col-4 linha">
+                    <span t-field="doc.partner_id.email" />
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12 rotulo">
+                    <h4 style="margin:0px;">Discriminação dos serviços</h4>
+                </div>
+            </div>
+            <div
+        class="row"
+        style="border: 1px solid black;padding: 0 0 5px 5px; min-height:150px;"
+      >
+                <div class="col-12">
+                    <t t-foreach="doc.document_line_ids" t-as="line">
+                        <p t-field="line.name" />
+                    </t>
+                    <span t-field="doc.informacoes_legais" />
+                    <span t-field="doc.informacoes_complementares" />
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12 rotulo">
+                    <h4 style="margin:0px;">Código do Serviço / Atividade</h4>
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12">
+                    <span
+            t-field="doc.document_line_ids[0].codigo_servico_municipio"
+          /> -
+                    <span
+            t-field="doc.document_line_ids[0].product_id.service_type_id.name"
+          />
+                </div>
+            </div>
+            <div class="row" style="border: 1px solid black; padding: 0px;">
+                <div class="col-12 rotulo">
+                    <h4 style="margin:0px;">Tributos Federais</h4>
+                </div>
+            </div>
+
+            <div class="row bb">
+                <div class="col-1 linha br">
+                </div>
+                <div class="col-1 rotulo br">
+                    PIS
+                </div>
+                <div class="col-1 linha br direita">
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        <span t-field="doc.pis_valor_retencao"
+                                t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                    </t>
+                </div>
+                <div class="col-1 rotulo br">
+                    COFINS
+                </div>
+                <div class="col-1 linha br direita">
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        <span t-field="doc.cofins_valor_retencao"
+                                t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                    </t>
+                </div>
+                <div class="col-1 rotulo br">
+                    IR(R$)
+                </div>
+                <div class="col-1 linha br direita">
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        <span t-field="doc.irrf_valor_retencao"
+                                t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                    </t>
+                </div>
+                <div class="col-1 rotulo br">
+                    INSS(R$)
+                </div>
+                <div class="col-1 linha br direita">
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        <span t-field="doc.inss_valor_retencao"
+                                t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                    </t>
+                </div>
+                <div class="col-1 rotulo br">
+                    CSLL(R$)
+                </div>
+                <div class="col-1 linha br direita">
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        <span t-field="doc.csll_valor_retencao"
+                                t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                    </t>
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-5 rotulo br">
+                    Detalhamento de Valores - Prestador dos Serviços
+                </div>
+                <div class="col-2 rotulo br">
+                    Outras Retenções
+                </div>
+                <div class="col-5 rotulo">
+                    Cálculo do ISSQN devido no Município
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    Valor dos Serviços R$
+                </div>
+                <div class="col-2 linha br direita">
+                    <span t-field="doc.valor_final"
+                                    t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+                <div class="col-2 rotulo br">
+                    Natureza Operação
+                </div>
+                <div class="col-3 rotulo br">
+                    Valor dos Serviços R$
+                </div>
+                <div class="col-2 linha direita">
+                    <span t-field="doc.valor_final"
+                                    t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    (-) Desconto Incondicionado
+                </div>
+                <div class="col-2 linha br direita">
+                    
+                </div>
+                <div class="col-2 linha br centro">
+                    1-Tributação no município
+                </div>
+                <div class="col-3 rotulo br">
+                    (-) Deduções permitidas em lei
+                </div>
+                <div class="col-2 linha direita">
+                    
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    (-) Desconto Condicionado
+                </div>
+                <div class="col-2 linha br">
+
+                </div>
+                <div class="col-2 rotulo br">
+                    Regime esp. Tributação
+                </div>
+                <div class="col-3 rotulo br">
+                    (-) Desconto Incondicionado
+                </div>
+                <div class="col-2 linha">
+
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    (-) Retenções Federais
+                </div>
+                <t t-set="retencoes_federais"
+                                   t-value="doc.pis_valor_retencao+doc.cofins_valor_retencao+doc.inss_valor_retencao
+                                   +doc.irrf_valor_retencao+doc.csll_valor_retencao"/>
+                <div class="col-2 linha br direita">
+                    <span t-esc="retencoes_federais"
+                                      t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+                <div class="col-2 linha br centro">
+                    0 - Nenhum
+                </div>
+                <div class="col-3 rotulo br">
+                    Base de Cálculo
+                </div>
+                <div class="col-2 linha direita">
+                    <span t-field="doc.iss_base_calculo"
+                                    t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    Outras Retenções
+                </div>
+                <div class="col-2 linha br direita">
+                </div>
+                <div class="col-2 rotulo br">
+                    Opção Simples Nacional
+                </div>
+                <div class="col-3 rotulo br">
+                    (x) Alíquota %
+                </div>
+                <div class="col-2 linha direita">
+                    <span t-esc="abs(doc.document_line_ids[0].iss_aliquota)"/> %
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    (-) ISS Retido
+                </div>
+                <t t-set="valor_retencao_iss" t-value="abs(doc.iss_valor) if doc.iss_valor &lt; 0 else 0.00"/>
+                <div class="col-2 linha br direita">
+                    <span t-esc="valor_retencao_iss"
+                                  t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+                <div class="col-2 linha br centro">
+                    <t t-if="doc.company_id.l10n_br_tax_regime == 'simples'">
+                        1 - Sim
+                    </t>
+                    <t t-if="doc.company_id.l10n_br_tax_regime != 'simples'">
+                        2 - Não
+                    </t>
+                </div>
+                <div class="col-3 rotulo br">
+                    ISS a reter:
+                </div>
+                <div class="col-2 linha centro">
+                    <t t-if="not valor_retencao_iss">
+                        ( ) Sim (X) Não
+                    </t>
+                    <t t-if="valor_retencao_iss">
+                        (X) Sim ( ) Não
+                    </t>
+                </div>
+            </div>
+
+            <div class="row completa">
+                <div class="col-3 rotulo br">
+                    (=) Valor Líquido R$
+                </div>
+                <div class="col-2 linha br direita">
+                    <t t-set="valor_com_retencao" t-value="doc.valor_final-doc.valor_desconto-retencoes_federais
+                            -valor_retencao_iss"/>
+                    <span t-esc="valor_com_retencao"
+                            t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+                <div class="col-2 rotulo br">
+                    Incentivador Cultural: 2 - Não
+                </div>
+                <div class="col-3 rotulo br">
+                    (=) Valor do ISS: R$
+                </div>
+                <div class="col-2 linha direita">
+                    <span style="color:red;" t-esc="valor_retencao_iss"
+                                    t-options='{"widget": "monetary",  "display_currency": doc.currency_id }'/>
+                </div>
+            </div>
+
+            <div class="row" style="border: 1px solid black;padding: 0px;">
+                <div class="col-1 linha">
+                    Avisos
+                </div>
+                <div class="col-11 linha bl">
+                    1- Uma via desta Nota Fiscal será enviada através do e-mail fornecido pelo Tomador dos Serviços.<br
+          />
+                    2- A autenticidade desta Nota Fiscal poderá ser verificada no site, <span style="text-transform: lowercase;" t-field="doc.company_id.partner_id.city_id" />.ginfes.com.br com a utilização do Código de Verificação.<br
+          />
+                    <t t-if="doc.company_id.l10n_br_tax_regime == 'simples'">
+                        3 - Documento emitido por ME ou EPP optante pelo Simples Nacional.Não gera direito a crédito fiscal de ISS e IPI.
+                    </t>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="main_template_br_nfse_danfe_ginfes">
+        <t t-call="web.basic_layout">
+            <div class="article">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="l10n_br_eletronic_document.danfse_report_template_ginfes" t-lang="doc.partner_id.lang"/>
+                </t>
+            </div>
+        </t>
+    </template>
+
+
+</odoo>
