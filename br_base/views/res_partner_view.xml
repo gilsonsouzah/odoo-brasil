@@ -1,104 +1,172 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <odoo>
 
-    <!-- Parceiro -->
-    <record id="view_br_base_partner_filter" model="ir.ui.view">
-        <field name="name">br_base.partner.filter</field>
+    <!--
+    views: res.partner
+    -->
+    <record id="l10n_br_base_res_partner_filter" model="ir.ui.view">
+        <field name="name">l10n_br_base.res.partner.filter</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_res_partner_filter" />
         <field name="arch" type="xml">
             <field name="name" position="after">
-                <field name="legal_name"/>
+                <field name="legal_name" />
                 <field name="cnpj_cpf" />
             </field>
         </field>
     </record>
 
-    <record id="view_br_base_partner_tree" model="ir.ui.view">
-        <field name="name">br_base.partner.tree</field>
+    <record id="l10n_br_base_res_partner_tree" model="ir.ui.view">
+        <field name="name">l10n_br_base.res.partner.tree</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_tree" />
         <field name="arch" type="xml">
             <field name="display_name" position="after">
+                <field name="legal_name" />
                 <field name="cnpj_cpf" />
                 <field name="inscr_est" />
             </field>
         </field>
     </record>
 
-    <record id="view_br_base_partner_form" model="ir.ui.view">
-        <field name="name">br_base.partner.form</field>
+    <record id="l10n_br_base_partner_form" model="ir.ui.view">
+        <field name="name">l10n_br_base.res.partner.form</field>
         <field name="model">res.partner</field>
+        <field name="priority">99</field>
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
-            <xpath expr="//div[@name='button_box']" position="inside">
-                <button name="action_check_sefaz" type="object" class="oe_stat_button"
-                    icon="fa-search" string="Search" attrs="{'invisible': [('company_type', '=', 'person')]}">
-                </button>
+            <field name="vat" position="replace" />
+            <xpath expr="//h1" position="after">
+                <group>
+                    <field name="city_id" invisible="1" />
+                    <!-- Allow inject city_id on context above -->
+                    <div class="oe_edit_only">
+                        <label
+                            for="legal_name"
+                            string="Full Name"
+                            attrs="{'invisible': [('is_company','=', True)]}"
+                        />
+                        <label
+                            for="legal_name"
+                            string="Legal Name"
+                            attrs="{'invisible': [('is_company','!=', True)]}"
+                        />
+                    </div>
+                    <field colspan="4" name="legal_name" nolabel="1" />
+                    <div class="oe_edit_only">
+                        <label
+                            for="cnpj_cpf"
+                            string="CPF"
+                            attrs="{'invisible': [('is_company','=', True)]}"
+                        />
+                        <label
+                            for="cnpj_cpf"
+                            string="CNPJ/Vat Number"
+                            attrs="{'invisible': [('is_company','!=', True)]}"
+                        />
+                    </div>
+                    <field colspan="4" name="cnpj_cpf" nolabel="1" />
+                    <div class="oe_edit_only">
+                        <label
+                            for="rg"
+                            string="RG"
+                            attrs="{'invisible': [('is_company','=', True)]}"
+                        />
+                    </div>
+                    <field
+                        name="rg"
+                        nolabel="1"
+                        attrs="{'invisible': [('is_company','=', True)]}"
+                    />
+                    <div class="oe_edit_only" name="inscr_est">
+                        <label
+                            for="inscr_est"
+                            name="inscr_est"
+                            string="State Tax Number"
+                        />
+                    </div>
+                    <field
+                        colspan="4"
+                        name="inscr_est"
+                        nolabel="1"
+                        placeholder="Para ISENTO deixe vazio ou escreva 'ISENTO'"
+                    />
+                </group>
             </xpath>
-            <xpath expr="//div[hasclass('o_row')]" position="before">
-                <h3 attrs="{'invisible': [('is_company', '=', False)]}">
-                    <field name="legal_name" placeholder="Legal Name" nolabel="1" />
-                </h3>
-                <h3>
-                    <field name="cnpj_cpf" placeholder="CNPJ/CPF" nolabel="1" />
-                </h3>
-            </xpath>
-            <field name="zip" position="replace" />
-            <field name="street" position="replace">
-                <field name="zip" placeholder="Zip Code" class="o_address_zip oe_inline" />
-                <field name="street" class="o_address_street" placeholder="Street" />
-                <field name="number" class="o_address_city" placeholder="Number" />
-                <field name="district" class="o_address_state" placeholder="District" />
-            </field>
-            <field name="street2" position="replace">
-                <field name="street2" placeholder="Complement" class="o_address_street" />
-            </field>
-            <field name="state_id" position="attributes">
-                <attribute name="domain">[('country_id','=',country_id)]</attribute>
-                <attribute name="options">{'no_create': True, 'no_create_edit': True}</attribute>
-            </field>
-            <field name="state_id" position="after">
-                <field name="city_id" class="o_address_city" placeholder="City"
-                    options="{'no_create': True, 'no_create_edit': True}" />
-            </field>
-            <field name="city" position="replace">
-                <field name="city" invisible="1" />
-            </field>
-            <field name="country_id" position="replace" />
-            <field name="state_id" position="before">
-                <field name="country_id" placeholder="Country" class="o_address_country"
-                    options="{'no_create': True, 'no_create_edit': True}" />
-            </field>
-            <notebook position="inside">
-                <page string="Fiscal Data">
-                    <group>
-                        <group>
-                            <field name="inscr_est" />
-                            <field name="rg_fisica" attrs="{'invisible': [('is_company','=', True)]}" />
-                            <field name="inscr_mun" attrs="{'invisible': [('is_company','!=', True)]}" />
+            <page position="after" name="sales_purchases">
+                <page string="Fiscal" name="fiscal">
+                    <group name="fiscal">
+                        <group string="Fiscal Infos" name="fiscal_numbers">
+                            <field name="cei_code" />
+                            <field
+                                name="inscr_mun"
+                                attrs="{'invisible': [('is_company','!=', True)]}"
+                            />
+                            <field
+                                name="suframa"
+                                attrs="{'invisible': [('is_company','!=', True)]}"
+                            />
+                            <field
+                                name="state_tax_number_ids"
+                                attrs="{'invisible': [('is_company','!=', True)]}"
+                            >
+                                <tree editable="bottom">
+                                    <field name="partner_id" invisible="1" />
+                                    <field name="inscr_est" />
+                                    <field
+                                        name="state_id"
+                                        domain="[('country_id', '=', %(base.br)d)]"
+                                        create="False"
+                                        edit="False"
+                                    />
+                                </tree>
+                            </field>
                         </group>
-                        <group>
-                            <field name="suframa" attrs="{'invisible': [('is_company','!=', True)]}" />
+                        <group string="Other Infos" name="other_infos">
+                            <field name="union_entity_code" />
+                            <field name="is_accountant" />
+                            <field
+                                name="crc_code"
+                                attrs="{'invisible': [('is_accountant','!=', True)]}"
+                            />
+                            <field
+                                name="crc_state_id"
+                                attrs="{'invisible': [('is_accountant','!=', True)]}"
+                                domain="[('country_id', '=', %(base.br)d)]"
+                            />
+                            <field name="rntrc_code" />
                         </group>
                     </group>
                 </page>
-            </notebook>
+            </page>
+            <xpath expr="//field[@name='child_ids']" position="attributes">
+                <!-- tracking_disable allow user to zip search on child_ids without save the child -->
+                <attribute
+                    name="context"
+                >{'tracking_disable': True, 'default_city_id': city_id}</attribute>
+            </xpath>
+        </field>
+    </record>
 
-            <!-- Contacts -->
-            <xpath expr="//div[@name='div_address']/field[@name='zip']" potition="replace"></xpath>
-            <xpath expr="//div[@name='div_address']/field[@name='city']" potition="replace"></xpath>
-            <xpath expr="//div[@name='div_address']/field[@name='country_id']" potition="replace"></xpath>
-            <xpath expr="//div[@name='div_address']/field[@name='street']" potition="before">
-                <field name="zip" />
-            </xpath>
-            <xpath expr="//div[@name='div_address']/field[@name='street']" potition="after">
-                <field name="number" placeholder="Number" />
-                <field name="district" placeholder="District" />
-                <field name="country_id" placeholder="Country" />
-            </xpath>
-            <xpath expr="//div[@name='div_address']/field[@name='state_id']" potition="after">
-                <field name="city_id" placeholder="City" />
+    <record id="l10n_br_base_partner_contact_form" model="ir.ui.view">
+        <field name="name">l10n_br_base.res.partner.contact.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">9999</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='div_address']" position="replace">
+                <div class="o_address_format">
+                    <field
+                        name="zip"
+                        placeholder="Zip code..."
+                        style="width: 70%"
+                        class="o_address_zip"
+                    />
+                    <!-- Some dummy field because i will be automatically replaced
+                    by odoo.src.odoo.addons.base.models.res_partner.FormatAddressMixin._fields_view_get_address
+                    loading l10n_br_base.l10n_br_base_res_partner_address and all of it's inheritances.
+                    -->
+                </div>
             </xpath>
         </field>
     </record>

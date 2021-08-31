@@ -1,19 +1,28 @@
-# © 2009  Renato Lima - Akretion
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+# Copyright (C) 2009  Renato Lima - Akretion
+# License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
+
+from odoo import fields, models
 
 
-from odoo import models, fields
+class Country(models.Model):
+    _inherit = "res.country"
 
+    bc_code = fields.Char(
+        string="BC Code",
+        size=4,
+    )
 
-class ResCountry(models.Model):
-    _inherit = 'res.country'
+    ibge_code = fields.Char(
+        string="IBGE Code",
+        size=4,
+    )
 
-    bc_code = fields.Char(u'BC Code', size=5)
-    ibge_code = fields.Char(u'IBGE Code', size=5)
-    siscomex_code = fields.Char(u'Siscomex Code', size=4)
+    siscomex_code = fields.Char(
+        string="Siscomex Code",
+        size=3,
+    )
 
-
-class ResCountryState(models.Model):
-    _inherit = 'res.country.state'
-
-    ibge_code = fields.Char(u'IBGE Code', size=2)
+    nationality_code = fields.Char(
+        string="Nationality Code",
+        size=2,
+    )

@@ -1,243 +1,189 @@
-# © 2009 Gabriel C. Stabel
-# © 2009 Renato Lima (Akretion)
-# © 2012 Raphaël Valyi (Akretion)
-# © 2015  Michell Stuttgart (KMEE)
-# © 2016 Danimar Ribeiro <danimaribeiro@gmail.com>, Trustcode
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+# Copyright (C) 2009 Gabriel C. Stabel
+# Copyright (C) 2009 Renato Lima (Akretion)
+# Copyright (C) 2012 Raphaël Valyi (Akretion)
+# License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-
-import re
-import base64
 import logging
 
-from odoo import models, fields, api, _
-from ..tools import fiscal
-from odoo.exceptions import UserError, ValidationError
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
 try:
-    from pytrustnfe.nfe import consulta_cadastro
-    from pytrustnfe.certificado import Certificado
+    from erpbrasil.base.fiscal import cnpj_cpf, ie
 except ImportError:
-    _logger.error('Cannot import pytrustnfe', exc_info=True)
+    _logger.error("Biblioteca erpbrasil.base não instalada")
 
 
-class ResPartner(models.Model):
-    _inherit = 'res.partner'
+class Partner(models.Model):
+    _name = "res.partner"
+    _inherit = [_name, "l10n_br_base.party.mixin"]
 
-    cnpj_cpf = fields.Char('CNPJ/CPF', size=18, copy=False)
-    inscr_est = fields.Char('State Inscription', size=16, copy=False)
-    rg_fisica = fields.Char('RG', size=16, copy=False)
-    inscr_mun = fields.Char('Municipal Inscription', size=18)
-    suframa = fields.Char('Suframa', size=18)
-    legal_name = fields.Char(
-        u'Legal Name', size=60, help="Name used in fiscal documents")
-    city_id = fields.Many2one(
-        'res.state.city', u'City',
-        domain="[('state_id','=',state_id)]")
-    district = fields.Char('District', size=32)
-    number = fields.Char(u'Number', size=10)
+    vat = fields.Char(related="cnpj_cpf")
 
-    _sql_constraints = [
-        ('res_partner_cnpj_cpf_uniq', 'unique (cnpj_cpf)',
-         _(u'This CPF/CNPJ number is already being used by another partner!'))
-    ]
+    is_accountant = fields.Boolean(string="Is accountant?")
 
-    @api.v8
-    def _display_address(self, without_company=False):
-        address = self
+    crc_code = fields.Char(string="CRC Code", size=18)
 
-        if address.country_id and address.country_id.code != 'BR':
-            # this ensure other localizations could do what they want
-            return super(ResPartner, self)._display_address(
-                without_company=False)
-        else:
-            address_format = (
-                address.country_id and address.country_id.address_format or
-                "%(street)s\n%(street2)s\n%(city)s %(state_code)s"
-                "%(zip)s\n%(country_name)s")
-            args = {
-                'state_code': address.state_id and address.state_id.code or '',
-                'state_name': address.state_id and address.state_id.name or '',
-                'country_code': address.country_id and
-                address.country_id.code or '',
-                'country_name': address.country_id and
-                address.country_id.name or '',
-                'company_name': address.parent_id and
-                address.parent_id.name or '',
-                'city_name': address.city_id and
-                address.city_id.name or '',
-            }
-            address_field = ['title', 'street', 'street2', 'zip', 'city',
-                             'number', 'district']
-            for field in address_field:
-                args[field] = getattr(address, field) or ''
-            if without_company:
-                args['company_name'] = ''
-            elif address.parent_id:
-                address_format = '%(company_name)s\n' + address_format
-            return address_format % args
+    crc_state_id = fields.Many2one(comodel_name="res.country.state", string="CRC State")
 
-    @api.multi
-    @api.constrains('cnpj_cpf', 'country_id', 'is_company')
+    rntrc_code = fields.Char(string="RNTRC Code", size=12)
+
+    cei_code = fields.Char(string="CEI Code", size=12)
+
+    union_entity_code = fields.Char(string="Union Entity code")
+
+    @api.constrains("cnpj_cpf", "inscr_est")
+    def _check_cnpj_inscr_est(self):
+        for record in self:
+            domain = []
+
+            # permite cnpj vazio
+            if not record.cnpj_cpf:
+                return
+
+            if self.env.context.get("disable_allow_cnpj_multi_ie"):
+                return
+
+            allow_cnpj_multi_ie = (
+                record.env["ir.config_parameter"]
+                .sudo()
+                .get_param("l10n_br_base.allow_cnpj_multi_ie", default=True)
+            )
+
+            if record.parent_id:
+                domain += [
+                    ("id", "not in", record.parent_id.ids),
+                    ("parent_id", "not in", record.parent_id.ids),
+                ]
+
+            domain += [("cnpj_cpf", "=", record.cnpj_cpf), ("id", "!=", record.id)]
+
+            # se encontrar CNPJ iguais
+            if record.env["res.partner"].search(domain):
+                if cnpj_cpf.validar_cnpj(record.cnpj_cpf):
+                    if allow_cnpj_multi_ie == "True":
+                        for partner in record.env["res.partner"].search(domain):
+                            if (
+                                partner.inscr_est == record.inscr_est
+                                and not record.inscr_est
+                            ):
+                                raise ValidationError(
+                                    _(
+                                        "There is already a partner record with this "
+                                        "Estadual Inscription !"
+                                    )
+                                )
+                    else:
+                        raise ValidationError(
+                            _("There is already a partner record with this CNPJ !")
+                        )
+                else:
+                    raise ValidationError(
+                        _("There is already a partner record with this CPF/RG!")
+                    )
+
+    @api.constrains("cnpj_cpf", "country_id")
     def _check_cnpj_cpf(self):
-        for item in self:
-            country_code = item.country_id.code or ''
-            if item.cnpj_cpf and country_code.upper() == 'BR':
-                if item.is_company:
-                    if not fiscal.validate_cnpj(item.cnpj_cpf):
-                        raise ValidationError(_(u'Invalid CNPJ Number!'))
-                elif not fiscal.validate_cpf(item.cnpj_cpf):
-                    raise ValidationError(_(u'Invalid CPF Number!'))
-        return True
+        result = True
+        for record in self:
 
-    def _validate_ie_param(self, uf, inscr_est):
-        try:
-            mod = __import__(
-                'odoo.addons.br_base.tools.fiscal', globals(),
-                locals(), 'fiscal')
+            disable_cnpj_ie_validation = record.env[
+                "ir.config_parameter"
+            ].sudo().get_param(
+                "l10n_br_base.disable_cpf_cnpj_validation", default=False
+            ) or self.env.context.get(
+                "disable_cpf_cnpj_validation"
+            )
+            if not disable_cnpj_ie_validation:
+                if record.country_id:
+                    country_code = record.country_id.code
+                    if country_code:
+                        if record.cnpj_cpf and country_code.upper() == "BR":
+                            if record.is_company:
+                                if not cnpj_cpf.validar(record.cnpj_cpf):
+                                    result = False
+                                    document = "CNPJ"
+                            elif not cnpj_cpf.validar(record.cnpj_cpf):
+                                result = False
+                                document = "CPF"
+                if not result:
+                    raise ValidationError(_("{} Invalid!").format(document))
 
-            validate = getattr(mod, 'validate_ie_%s' % uf)
-            if not validate(inscr_est):
-                return False
-        except AttributeError:
-            if not fiscal.validate_ie_param(uf, inscr_est):
-                return False
-        return True
-
-    @api.constrains('inscr_est', 'state_id', 'is_company')
+    @api.constrains("inscr_est", "state_id")
     def _check_ie(self):
         """Checks if company register number in field insc_est is valid,
         this method call others methods because this validation is State wise
-        :Return: True or False."""
-        for partner in self:
-            if not partner.inscr_est or partner.inscr_est == 'ISENTO' \
-                    or not partner.is_company:
-                return True
-            uf = partner.state_id and partner.state_id.code.lower() or ''
-            res = partner._validate_ie_param(uf, partner.inscr_est)
-            if not res:
-                raise ValidationError(_(u'Invalid State Inscription!'))
-        return True
 
-    @api.one
-    @api.constrains('inscr_est')
-    def _check_ie_duplicated(self):
-        """ Check if the field inscr_est has duplicated value
+        :Return: True or False.
+
+        :Parameters:
         """
-        if not self.inscr_est or self.inscr_est == 'ISENTO':
-            return True
-        partner_ids = self.search(
-            ['&', ('inscr_est', '=', self.inscr_est), ('id', '!=', self.id)])
+        for record in self:
+            result = True
 
-        if len(partner_ids) > 0:
-            raise ValidationError(
-                _('This State Inscription/RG number \
-                  is already being used by another partner!'))
-        return True
+            disable_ie_validation = record.env["ir.config_parameter"].sudo().get_param(
+                "l10n_br_base.disable_ie_validation", default=False
+            ) or self.env.context.get("disable_ie_validation")
+            if not disable_ie_validation:
+                if record.inscr_est == "ISENTO":
+                    return
+                if record.inscr_est and record.is_company and record.state_id:
+                    state_code = record.state_id.code or ""
+                    uf = state_code.lower()
+                    result = ie.validar(uf, record.inscr_est)
+                if not result:
+                    raise ValidationError(_("Estadual Inscription Invalid !"))
 
-    @api.onchange('cnpj_cpf')
-    def _onchange_cnpj_cpf(self):
-        country_code = self.country_id.code or ''
-        if self.cnpj_cpf and country_code.upper() == 'BR':
-            val = re.sub('[^0-9]', '', self.cnpj_cpf)
-            if len(val) == 14:
-                cnpj_cpf = "%s.%s.%s/%s-%s"\
-                    % (val[0:2], val[2:5], val[5:8], val[8:12], val[12:14])
-                self.cnpj_cpf = cnpj_cpf
-            elif not self.is_company and len(val) == 11:
-                cnpj_cpf = "%s.%s.%s-%s"\
-                    % (val[0:3], val[3:6], val[6:9], val[9:11])
-                self.cnpj_cpf = cnpj_cpf
-            else:
-                raise UserError(_(u'Verify CNPJ/CPF number'))
-
-    @api.onchange('city_id')
-    def _onchange_city_id(self):
-        """ Ao alterar o campo city_id copia o nome
-        do município para o campo city que é o campo nativo do módulo base
-        para manter a compatibilidade entre os demais módulos que usam o
-        campo city.
+    @api.constrains("state_tax_number_ids")
+    def _check_state_tax_number_ids(self):
+        """Checks if field other insc_est is valid,
+        this method call others methods because this validation is State wise
+        :Return: True or False.
         """
-        if self.city_id:
-            self.city = self.city_id.name
-
-    @api.onchange('zip')
-    def onchange_mask_zip(self):
-        if self.zip:
-            val = re.sub('[^0-9]', '', self.zip)
-            if len(val) == 8:
-                zip = "%s-%s" % (val[0:5], val[5:8])
-                self.zip = zip
+        for record in self:
+            for inscr_est_line in record.state_tax_number_ids:
+                state_code = inscr_est_line.state_id.code or ""
+                uf = state_code.lower()
+                valid_ie = ie.validar(uf, inscr_est_line.inscr_est)
+                if not valid_ie:
+                    raise ValidationError(_("Invalid State Tax Number!"))
+                if inscr_est_line.state_id.id == record.state_id.id:
+                    raise ValidationError(
+                        _(
+                            "There can only be one state tax"
+                            " number per state for each partner!"
+                        )
+                    )
+                duplicate_ie = record.search(
+                    [
+                        ("state_id", "=", inscr_est_line.state_id.id),
+                        ("inscr_est", "=", inscr_est_line.inscr_est),
+                    ]
+                )
+                if duplicate_ie:
+                    raise ValidationError(
+                        _("State Tax Number already used" " %s" % duplicate_ie.name)
+                    )
 
     @api.model
     def _address_fields(self):
-        """ Returns the list of address fields that are synced from the parent
-        when the `use_parent_address` flag is set.
-        Extenção para os novos campos do endereço """
-        address_fields = super(ResPartner, self)._address_fields()
-        return list(address_fields + ['city_id', 'number', 'district'])
+        """Returns the list of address
+        fields that are synced from the parent."""
+        return super()._address_fields() + ["district"]
 
-    @api.one
-    def action_check_sefaz(self):
-        if self.cnpj_cpf and self.state_id:
-            if self.state_id.code == 'AL':
-                raise UserError(_(u'Alagoas doesn\'t have this service'))
-            if self.state_id.code == 'RJ':
-                raise UserError(_(
-                    u'Rio de Janeiro doesn\'t have this service'))
-            company = self.env.user.company_id
-            if not company.nfe_a1_file and not company.nfe_a1_password:
-                raise UserError(_(
-                    u'Configure the company\'s certificate and password'))
-            cert = company.with_context({'bin_size': False}).nfe_a1_file
-            cert_pfx = base64.decodestring(cert)
-            certificado = Certificado(cert_pfx, company.nfe_a1_password)
-            cnpj = re.sub('[^0-9]', '', self.cnpj_cpf)
-            obj = {'cnpj': cnpj, 'estado': self.state_id.code}
-            resposta = consulta_cadastro(certificado, obj=obj, ambiente=1,
-                                         estado=self.state_id.ibge_code)
+    def get_street_fields(self):
+        """Returns the fields that can be used in a street format.
+        Overwrite this function if you want to add your own fields."""
+        return super().get_street_fields() + ["street"]
 
-            info = resposta['object'].getchildren()[0]
-            info = info.infCons
-            if info.cStat == 111 or info.cStat == 112:
-                if not self.inscr_est:
-                    inscr = info.infCad.IE.text
-                    if self.state_id.code == 'BA':
-                        inscr = inscr.zfill(9)
-                    self.inscr_est = inscr
-                if not self.cnpj_cpf:
-                    self.cnpj_cpf = info.infCad.CNPJ.text
+    def _set_street(self):
+        company_country = self.env.user.company_id.country_id
+        if company_country.code:
+            if company_country.code.upper() != "BR":
+                return super()._set_street()
 
-                def get_value(obj, prop):
-                    if prop not in dir(obj):
-                        return None
-                    return getattr(obj, prop)
-                self.legal_name = get_value(info.infCad, 'xNome')
-                if "ender" not in dir(info.infCad):
-                    return
-                cep = get_value(info.infCad.ender, 'CEP') or ''
-                self.zip = str(cep).zfill(8) if cep else ''
-                self.street = get_value(info.infCad.ender, 'xLgr')
-                self.number = get_value(info.infCad.ender, 'nro')
-                self.street2 = get_value(info.infCad.ender, 'xCpl')
-                self.district = get_value(info.infCad.ender, 'xBairro')
-                cMun = get_value(info.infCad.ender, 'cMun')
-                xMun = get_value(info.infCad.ender, 'xMun')
-                city = None
-                if cMun:
-                    city = self.env['res.state.city'].search(
-                        [('ibge_code', '=', str(cMun)[2:]),
-                         ('state_id', '=', self.state_id.id)])
-                if not city and xMun:
-                    city = self.env['res.state.city'].search(
-                        [('name', 'ilike', xMun),
-                         ('state_id', '=', self.state_id.id)])
-                if city:
-                    self.city_id = city.id
-            else:
-                msg = "%s - %s" % (info.cStat, info.xMotivo)
-                raise UserError(msg)
-        else:
-            raise UserError(_(u'Fill the State and CNPJ fields to search'))
+    @api.onchange("city_id")
+    def _onchange_city_id(self):
+        self.city = self.city_id.name
